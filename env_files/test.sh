@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+HOST_IP=195.208.252.81
+export NOVA_PROJECT_ID=test
+export TENANT=test
+export NOVA_USERNAME=test
+export USERNAME=test
+export NOVA_API_KEY=123
+export NOVA_URL=http://195.208.252.81:5000/v2.0/
+export NOVA_VERSION=1.1
+export NOVA_REGION_NAME=nova
+export EC2_URL=http://195.208.252.81:80/services/Cloud
+export EC2_ACCESS_KEY=test-cred
+export EC2_SECRET_KEY=123
+export OS_AUTH_USER=test
+export OS_AUTH_KEY=123
+export OS_AUTH_TENANT=test
+export OS_AUTH_URL=http://195.208.252.81:5000/v2.0/
+export NOVA_AUTH_STRATEGY=keystone
+export OS_AUTH_STRATEGY=keystone
+export AUTH_TOKEN=test-token
+export NOVA_KEY_DIR=/etc/mynova/creds/test
+export S3_URL=http://http://195.208.252.81:5000/v2.0/:3333
+export EUCALYPTUS_CERT=/etc/mynova/creds/test/test.pem
+export EC2_PRIVATE_KEY=/etc/mynova/creds/test/pk.pem
+export EC2_CERT=/etc/mynova/creds/test/cert.pem
+export NOVA_CERT=/etc/mynova/creds/test/cacert.pem
+export EUCALYPTUS_CERT=/etc/mynova/creds/test

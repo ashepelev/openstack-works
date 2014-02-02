@@ -1,0 +1,9 @@
+nova-manage service disable --host=server2 --service=nova-compute
+
+mkdir –p /root/creds
+/usr/bin/python /usr/bin/nova-manage project zipfile $NOVA_PROJECT $NOVA_PROJECT_USER /root/creds/novacreds.zip
+
+euca-run-instances -k nubeblog -t m1.tiny ami-3212757a
+
+euca-run-instances -n 1 --kernel aki-00000009 --ramdisk ari-0000000a -t m1.tiny ami-0000000b
+

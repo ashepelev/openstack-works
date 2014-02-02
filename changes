@@ -1,0 +1,4 @@
+изменено
+nova/api/ec2/cloud.py
+nova/api/ec2/ec2utils.py
+nova/images/s3.py

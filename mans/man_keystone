@@ -1,0 +1,261 @@
+// keystone envs
+SERVICE_TOKEN=Admin // соотв-ет admin_token в keystone.conf
+SERVICE_ENDPOINT=http://localhost:35357/v2.0
+// Added to keystone.conf
+
+# DB Auths
+novadbadmin 9HNTexRk
+glancedbadmin 2Blv0pc4
+keystonedbadmin M8qEpeFw
+
+# Added
+log_dir = /var/log/keystone
+log_file = keystone.log
+keystone-admin-role = Admin
+keystone-service-admin-role = Admin
+hash-password = True
+
+# Creating First Tenant
+keystone tenant-create --name test-tenant --description 'Test tenant' --enabled true
+keystone tenant-create --name admin-tenant --description 'Tenant for users with admin roles' --enabled true
+keystone tenant-create --name service-tenant --description 'Tenant for users-services' --enabled true
+
+# Conf keystone.conf
+[sql]
+connection =  mysql://keystonedbadmin:M8qEpeFw@localhost/keystone
+
+keystone-manage db_sync with root
+
+# Creating Roles
+keystone role-create --name Admin
+keystone role-create --name User
+
+# Adding Services
+keystone service-create --name nova --type compute --description 'OpenStack Compute Service'
+keystone service-create --name volume --type volume --description 'OpenStack Volume Service'
+keystone service-create --name glance --type image --description 'OpenStack Image Service'
+keystone service-create --name swift --type object-store --description 'OpenStack Storage Service'
+keystone service-create --name keystone --type identity --description 'OpenStack Identity'
+keystone service-create --name ec2 --type ec2 --description 'OpenStack EC2 service'
+
+# Creating Users
+keystone user-create --name test-user --tenant_id 9eaf7f19dff443feb678d43fd81587bb --pass test --enabled true
+keystone user-create --name test-admin --tenant_id 9eaf7f19dff443feb678d43fd81587bb --pass test --enabled true
+keystone user-create --name glance --tenant_id bbced3aced3242e288922682e545d958 --pass glance-pass --enable true
+keystone user-create --name nova --tenant_id bbced3aced3242e288922682e545d958 --pass nova-pass --enable true
+
+# Function for getting id's
+function get_id () {
+    echo `$@ | awk '/ id / { print $4 }'`
+}
+
+# Adding roles
+keystone user-role-add --user 35b5e78da70345519307e4e37c09bf72 --role 54c1e61eec5b43d9b621e9c027fbc17b --tenant_id 9eaf7f19dff443feb678d43fd81587bb
+keystone user-role-add --user 1db3caea079149d89d417338354eedde --role 5bb57aebfb1b4866b32a285ab4d07893 --tenant_id 9eaf7f19dff443feb678d43fd81587bb
+keystone user-role-add --user 3773d24de52249f8aee941c6ab897651 --role 54c1e61eec5b43d9b621e9c027fbc17b --tenant_id bbced3aced3242e288922682e545d958
+keystone user-role-add --user 82418ff563d14e949d4f5e14ae1503ac --role 54c1e61eec5b43d9b621e9c027fbc17b --tenant_id bbced3aced3242e288922682e545d958
+
+
+# Creating users for glance and nova services
+# Configure service users/roles
+NOVA_USER=$(get_id keystone user-create --name=nova \
+                                        --pass="$SERVICE_PASSWORD" \
+                                        --tenant_id $SERVICE_TENANT \
+                                        --email=nova@hastexo.com)
+keystone user-role-add --tenant_id $SERVICE_TENANT \
+                       --user $NOVA_USER \
+                       --role $ADMIN_ROLE
+
+GLANCE_USER=$(get_id keystone user-create --name=glance \
+                                          --pass="$SERVICE_PASSWORD" \
+                                          --tenant_id $SERVICE_TENANT \
+                                          --email=glance@hastexo.com)
+keystone user-role-add --tenant_id $SERVICE_TENANT \
+                       --user $GLANCE_USER \
+                       --role $ADMIN_ROLE
+                       
+# Creating users for glance and nova, ec2, swift
+keystone user-create -tenant-id <service-tenant> --name glance --pass <pass>
+keystone user-role-add --user <glance-id> --tenant <service-tenant> --role <admin-role>
+keystone user-create -tenant-id <service-tenant> --name nova --pass <pass>
+keystone user-role-add --user <nova-id> --tenant <service-tenant> --role <admin-role>
+keystone user-create --tenant <service-tenant> --name ec2 --pass test
+keystone user-role-add --user <ec2-id> --tenant <service-tenant> --role <admin-role>
+...
+
+#Creating Service Endpoints
+keystone endpoint-create --region RegionOne --service <service-keystone-id> --publicurl=http://localhost:5000/v2.0 --internalurl=http://localhost:5000/v2.0 --adminurl=http://localhost:35357/v2.0
+
+keystone endpoint-create --region RegionOne --service <nova-compute-id> --publicurl='http://localhost:8774/v2/%(tenant_id)s' --internalurl='http://localhost:5000/v2/%(tenant_id)s' --adminurl='http://localhost:35357/v2/%(tenant_id)s'
+
+keystone endpoint-create --region RegionOne --service <nova-volume-id> --publicurl='http://localhost:8776/v1/%(tenant_id)s' --internalurl='http://localhost:8776/v1/%(tenant_id)s' --adminurl='http://localhost:8776/v1/%(tenant_id)s'
+
+keystone endpoint-create --region RegionOne --service <glance-id> --publicurl='http://localhost:9292' --internalurl='http://localhost:9292' --adminurl='http://localhost:9292'
+
+keystone endpoint-create --region RegionOne --service <ec2-id> --publicurl='http://localhost:8773/services/Cloud' --internalurl='http://localhost:8773/services/Cloud' --adminurl='http://localhost:8773/services/Cloud'
+
+keystone endpoint-create --region RegionOne --service <swift-id> --publicurl='http://localhost:8888/v1/AUTH_%(tenant_id)s' --internalurl='http://localhost:8888/v1/AUTH_%(tenant_id)s' --adminurl='http://localhost:8888/v1'
+
+#  /etc/glance/glance-api-paste.ini
+    [filter:authtoken]
+    admin_tenant_name = service
+    admin_user = glance
+    admin_password = glance
+
+# /etc/glance/glance-api.conf
+    [keystone_authtoken]
+    auth_host = 127.0.0.1
+    auth_port = 35357
+    auth_protocol = http
+    admin_tenant_name = service
+    admin_user = glance
+    admin_password = glance
+
+    [paste_deploy]
+    # Name of the paste configuration file that defines the available pipelines
+    config_file = /etc/glance/glance-api-paste.ini
+
+    # Partial name of a pipeline in your paste configuration file with the
+    # service name removed. For example, if your paste section name is
+    # [pipeline:glance-api-keystone], you would configure the flavor below
+    # as 'keystone'.
+    flavor=keystone
+    
+    sql_connection = mysql://glance:[YOUR_GLANCEDB_PASSWORD]@192.168.206.130/glance
+
+service glance-api restart
+
+# /etc/glance/glance-registry.conf
+
+    [keystone_authtoken]
+    auth_host = 127.0.0.1
+    auth_port = 35357
+    auth_protocol = http
+    admin_tenant_name = service
+    admin_user = glance
+    admin_password = glance
+
+    [paste_deploy]
+    # Name of the paste configuration file that defines the available pipelines
+    config_file = /etc/glance/glance-registry-paste.ini
+
+    # Partial name of a pipeline in your paste configuration file with the
+    # service name removed. For example, if your paste section name is
+    # [pipeline:glance-api-keystone], you would configure the flavor below
+    # as 'keystone'.
+    flavor=keystone
+    
+    sql_connection = mysql://glance:[YOUR_GLANCEDB_PASSWORD]@192.168.206.130/glance
+    
+# /etc/glance/glance-registry-paste.ini
+
+    # Use this pipeline for keystone auth
+    [pipeline:glance-registry-keystone]
+    pipeline = authtoken context registryapp
+
+
+
+
+
+# Conf glance
+admin_tenant_name = %SERVICE_TENANT_NAME% //
+admin_user = %SERVICE_USER%
+admin_password = %SERVICE_PASSWORD% // password for admin user
+
+admin_tenant_name = service-tenant
+admin_user = glance
+admin_password = glance-pass
+
+in glance-api-paste.ini & glance-registry-paste.ini
+# In glance-registry.conf
+sql_connection = mysql://glancedbadmin:2Blv0pc4@localhost/glance
+
+# Glance needs envs
+export OS_TENANT_NAME=service-tenant
+export OS_USERNAME=glance
+export OS_PASSWORD=glance-pass
+export OS_AUTH_URL="http://localhost:5000/v2.0/"
+export OS_REGION_NAME=RegionOne
+
+# Glance need images img
+# Download openstack compatible images
+# Or make yourself with kvm
+
+# Check VT
+kvm-ok
+
+# Enabling VT
+    # Check modules
+        lsmod | grep kvm
+    # Enable
+        modprobe kvm
+        modprobe kvm-intel
+    # Or
+        modprobe kvm-amd
+# Adding VM
+
+glance --os_username=glance --os_password=glance-pass --os_tenant_name=service-tenant --os_auth_url="http://localhost:5000/v2.0" add name="fedora17" disk_format=qcow2 container_format=bare distro="Fedora 17 86_64" < ./mynova/images/f17-x86_64-openstack-sda.qcow2
+
+# Creating Tables for glance at mysql
+
+CREATE TABLE images (
+        id VARCHAR(36) NOT NULL,
+        name VARCHAR(255),
+        size BIGINT,
+        status VARCHAR(30) NOT NULL,
+        is_public BOOL NOT NULL,
+        location TEXT,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME,
+        deleted_at DATETIME,
+        deleted BOOL NOT NULL,
+        disk_format VARCHAR(20),
+        container_format VARCHAR(20),
+        checksum VARCHAR(32),
+        owner VARCHAR(255),
+        min_disk INTEGER,
+        min_ram INTEGER,
+        protected BOOL,
+        PRIMARY KEY (id),
+        CHECK (is_public IN (0, 1)),
+        CHECK (deleted IN (0, 1))
+);
+
+CREATE TABLE image_members (
+        id INTEGER NOT NULL AUTO_INCREMENT
+        ,image_id VARCHAR(36) NOT NULL
+        ,member VARCHAR(255) NOT NULL
+        ,can_share BOOL NOT NULL
+        ,created_at DATETIME NOT NULL
+        ,updated_at DATETIME
+        ,deleted_at DATETIME
+        ,deleted BOOL NOT NULL
+        ,UNIQUE (image_id, member)
+        ,CHECK (can_share IN (0, 1))
+        ,CHECK (deleted IN (0, 1))
+        ,PRIMARY KEY (id)
+        ,FOREIGN KEY(image_id) REFERENCES images (id)
+);
+
+CREATE TABLE image_properties (
+        id INTEGER NOT NULL AUTO_INCREMENT,
+        image_id VARCHAR(36) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        value TEXT,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME,
+        deleted_at DATETIME,
+        deleted BOOL NOT NULL,
+        PRIMARY KEY (id),
+        CHECK (deleted IN (0, 1)),
+        UNIQUE (image_id, name),
+        FOREIGN KEY(image_id) REFERENCES images (id)
+);
+
+CREATE INDEX ix_image_properties_name ON image_properties (name);
+CREATE INDEX ix_image_members_deleted ON image_members (deleted);
+CREATE INDEX ix_image_members_image_id ON image_members (image_id);
+CREATE INDEX ix_image_members_image_id_member ON image_members (image_id, member);
+CREATE INDEX ix_images_deleted ON images (deleted);
+CREATE INDEX ix_images_is_public ON images (is_public);
+

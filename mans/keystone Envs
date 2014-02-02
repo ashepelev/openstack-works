@@ -1,0 +1,29 @@
+  --os_username <auth-user-name>
+                        Defaults to env[OS_USERNAME]
+  --os_password <auth-password>
+                        Defaults to env[OS_PASSWORD]
+  --os_tenant_name <auth-tenant-name>
+                        Defaults to env[OS_TENANT_NAME]
+  --os_tenant_id <tenant-id>
+                        Defaults to env[OS_TENANT_ID]
+  --os_auth_url <auth-url>
+                        Defaults to env[OS_AUTH_URL]
+  --os_region_name <region-name>
+                        Defaults to env[OS_REGION_NAME]
+  --os_identity_api_version <identity-api-version>
+                        Defaults to env[OS_IDENTITY_API_VERSION] or 2.0
+  --token <service-token>
+                        Defaults to env[SERVICE_TOKEN]
+  --endpoint <service-endpoint>
+                        Defaults to env[SERVICE_ENDPOINT]
+  --username <auth-user-name>
+                        Deprecated
+  --password <auth-password>
+                        Deprecated
+  --tenant_name <tenant-name>
+                        Deprecated
+  --auth_url <auth-url>
+                        Deprecated
+  --region_name <region-name>
+                        Deprecated
+
